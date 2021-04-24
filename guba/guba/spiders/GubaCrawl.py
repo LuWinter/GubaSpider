@@ -1,9 +1,14 @@
 from scrapy import Request, Spider, FormRequest
 import re
 from ..items import GubaItem
+from ..ProxyPool.db import RedisClient
+from ..user_agent_pool import UA
+from random import choice
+import json
 
 
 class GubacrawlSpider(Spider):
+
     name = 'GubaCrawl'
     allowed_domains = ['guba.eastmoney.com']
     start_urls = ['http://guba.eastmoney.com/']
@@ -11,7 +16,7 @@ class GubacrawlSpider(Spider):
     request_form_data = {
         'param': 'postid=1025461213&sort=1&sorttype=1&p=1&ps=30',
         'path': 'reply/api/Reply/ArticleNewReplyList',
-        'env': 2
+        'env': '2'
     }
     headers = {
         'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.182 Safari/537.36 Edg/88.0.705.74",
@@ -19,18 +24,23 @@ class GubacrawlSpider(Spider):
         'Referer': 'https://guba.eastmoney.com/list,002074.html',
         'Host': 'guba.eastmoney.com'
     }
+    stoke_code = "002074"
+    web_page_count = 3
     post_id_exp = re.compile('/news,[0-9]{6},([0-9]{,15})\.html')
     user_id_exp = re.compile('"user_id":"([0-9]+)')
     user_age_exp = re.compile('"user_age":"(.+)","user_influ_level"')
     post_time_and_ip_exp = re.compile('"post_display_time":"(.+)","post_ip":"(.*)","post_state"')
     post_info_exp = re.compile('"post_click_count":([0-9]+),"post_forward_count":([0-9]+),"post_comment_count":([0-9]+),"post_comment_authority":([0-9]+),"post_like_count":([0-9]+)')
 
+    redis = RedisClient()
+    USER_AGENTS = UA
+
     def start_requests(self):
-        stoke_code = "002074"
-        for i in range(1, 3):
-            base_url = "https://guba.eastmoney.com/list,%s_%s.html" % (stoke_code, i)
+        for i in range(1, self.web_page_count):
+            base_url = "https://guba.eastmoney.com/list,%s_%s.html" % (self.stoke_code, i)
             request = Request(url=base_url, callback=self.parse)
-            request.meta["stoke_code"] = stoke_code
+            request.meta["stoke_code"] = self.stoke_code
+            request = self.add_headers(request)
             yield request
 
     def parse(self, response):
@@ -38,63 +48,102 @@ class GubacrawlSpider(Spider):
         page_check = re.compile('data-popstock="([0-9]{6})"')
         stoke_code = response.meta["stoke_code"]
         if re.search(page_check, response.text):
-            print("正常页面")
-            pattern = re.compile('/news,[0-9]{6},[0-9]{,15}\.html')
+            pattern = re.compile('class="l3 a3">(<em class="icon icon_list_img"></em> )?<a href="(/news,[0-9]{6},[0-9]{,15}\.html)')  # 可以过滤掉一些非常规帖子（如问董秘、资讯）
             post_links = re.findall(pattern, response.text)
             for post_link in post_links:
-                full_link = "https://guba.eastmoney.com" + post_link
+                full_link = "https://guba.eastmoney.com" + post_link[1]
                 print(full_link)
                 self.headers["Referer"] = "https://guba.eastmoney.com/list,%s.html" % stoke_code
                 page_request = Request(url=full_link, callback=self.page_parse, headers=self.headers)
                 page_request.meta["stoke_code"] = stoke_code
-                # yield page_request
+                page_request = self.add_headers(page_request)
+                yield page_request
         else:
-            print("垃圾页面")
-            # 剔除代理
+            print("垃圾页面！\n剔除代理", response.meta["proxy"])
+            self.redis.delete(response.meta["proxy"].lstrip("https://"))
             request = Request(url=response.url, callback=self.parse)
             request.meta["stoke_code"] = stoke_code
+            request = self.add_headers(request)
             yield request
 
     def page_parse(self, response):
         page_check = re.compile('data-popstock="([0-9]{6})"')
         stoke_code = response.meta["stoke_code"]
-        if re.search(page_check, response.text):                        # 判断是否为正常页面
+        if re.search(page_check, response.text):                                                    # 判断是否为正常页面
             postItem = GubaItem()
-            postItem["stoke_code"] = stoke_code
-            postItem["post_id"] = re.search(self.post_id_exp, response.url).group(1)
-            postItem["user_id"] = re.search(self.user_id_exp, response.text).group(1)
-            postItem["user_age"] = re.search(self.user_age_exp, response.text).group(1)
+            postItem["stoke_code"] = stoke_code                                                     # 股票代码
+            postItem["post_id"] = re.search(self.post_id_exp, response.url).group(1)                # 帖子ID
+            postItem["user_id"] = re.search(self.user_id_exp, response.text).group(1)               # 发帖人ID
+            postItem["user_age"] = re.search(self.user_age_exp, response.text).group(1)             # 发帖人吧龄
             post_time_and_ip = re.search(self.post_time_and_ip_exp, response.text)
-            postItem["post_time"] = post_time_and_ip.group(1)
-            postItem["post_ip"] = post_time_and_ip.group(2)
+            postItem["post_time"] = post_time_and_ip.group(1)                                       # 发帖时间
+            postItem["post_ip"] = post_time_and_ip.group(2)                                         # 发帖人IP
             post_info = re.search(self.post_info_exp, response.text)
-            postItem["post_click_count"] = post_info.group(1)
-            postItem["post_forward_count"] = post_info.group(2)
-            postItem["post_comment_count"] = post_info.group(3)
-            postItem["post_comment_authority"] = post_info.group(4)
-            postItem["post_like_count"] = post_info.group(5)
+            postItem["post_click_count"] = post_info.group(1)                                       # 帖子点击量
+            postItem["post_forward_count"] = post_info.group(2)                                     # 未知统计量
+            postItem["post_comment_count"] = post_info.group(3)                                     # 帖子评论量
+            postItem["post_comment_authority"] = post_info.group(4)                                 # 帖子权威评论量
+            postItem["post_like_count"] = post_info.group(5)                                        # 帖子点赞量
             title = response.xpath('//div[@id="zwconttbt"]/text()').extract_first().strip()
-            postItem["post_title"] = title
+            postItem["post_title"] = title                                                          # 帖子标题
             text = response.xpath('//div[@class="stockcodec .xeditor"]//text()').extract()
-            text = [sentence.strip() for sentence in text]
+            text = [sentence.strip() for sentence in text]                                          # 帖子正文
             postItem["post_text"] = " ".join(text)
-            if postItem["post_comment_count"] != '0':                   # 判断是否有评论
+            if postItem["post_comment_count"] != '0':                                               # 判断是否有评论
                 self.request_form_data["param"] = "postid=%s&sort=1&sorttype=1&p=1&ps=30" % postItem["post_id"]
-                self.headers["Referer"] = 'https://guba.eastmoney.com/news,002074,1025461213.html'
+                self.headers["Referer"] = 'https://guba.eastmoney.com/news,002074,%s.html' % postItem["post_id"]
                 comment_url = "https://guba.eastmoney.com/interface/GetData.aspx"
-                comment_request = FormRequest(url=comment_url, formdata=self.request_form_data, headers=self.headers, callback=self.get_comment)
-                comment_request.meta["item"] = postItem
-                # yield comment_request
+                comment_request = FormRequest(url=comment_url, formdata=self.request_form_data,
+                                              headers=self.headers, callback=self.get_comment)
+                comment_request.meta["item"] = postItem                                             # 向下一层请求传递参数
+                comment_request = self.add_headers(comment_request)
+                yield comment_request
             else:
-                postItem["comment_list"] = []
+                postItem["comment_list"] = []                                                       # 没有评论就返回空
+                print("成功获取帖子", postItem["post_id"])
+                print(postItem)
                 yield postItem
         else:
-            print("垃圾页面")
-            # 剔除代理
+            print("垃圾页面！\n剔除代理", response.meta["proxy"])
+            self.redis.delete(response.meta["proxy"].lstrip("https://"))
             self.headers["Referer"] = "https://guba.eastmoney.com/list,%s.html" % stoke_code
             page_request = Request(url=response.url, callback=self.page_parse, headers=self.headers)
             page_request.meta["stoke_code"] = stoke_code
-            # yield page_request
+            page_request = self.add_headers(page_request)
+            yield page_request
 
     def get_comment(self, response):
-        pass
+        postItem = response.meta["item"]
+        if response.status == 200:
+            comment_list = json.loads(response.text)['re']
+            new_comment = []
+            for comment in comment_list:
+                new_item = dict()
+                new_item["reply_id"] = comment["reply_id"]
+                new_item["reply_time"] = comment["reply_publish_time"]
+                new_item["reply_user"] = comment["user_id"]
+                new_item["reply_text"] = comment["reply_text"]
+                new_item["child_reply_count"] = comment["reply_count"]
+                new_comment.append(new_item)
+            postItem["comment_list"] = new_comment
+            print("成功获取帖子", postItem["post_id"])
+            print(postItem)
+            yield postItem
+        else:
+            print("提取评论失败！\n剔除代理", response.meta["proxy"])
+            self.redis.delete(response.meta["proxy"].lstrip("https://"))
+            self.request_form_data["param"] = "postid=%s&sort=1&sorttype=1&p=1&ps=30" % postItem["post_id"]
+            self.headers["Referer"] = 'https://guba.eastmoney.com/news,002074,%s.html' % postItem["post_id"]
+            comment_url = "https://guba.eastmoney.com/interface/GetData.aspx"
+            comment_request = FormRequest(url=comment_url, formdata=self.request_form_data,
+                                          headers=self.headers, callback=self.get_comment)
+            comment_request.meta["item"] = postItem                                             # 向下一层请求传递参数
+            comment_request = self.add_headers(comment_request)
+            yield comment_request
+
+    def add_headers(self, request):
+        proxy = self.redis.random()
+        request.meta['proxy'] = "https://" + proxy
+        user_agent = choice(self.USER_AGENTS)
+        request.headers.setdefault('User-Agent', user_agent)
+        return request

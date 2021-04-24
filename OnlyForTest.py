@@ -52,6 +52,19 @@ headers_comment = {
 # time2 = end2 - start2
 # print(time1 < time2)
 
+
+# 这一段用于测试正则提取帖子链接
+# url_content = "https://guba.eastmoney.com/list,002074_7.html"
+# response = requests.get(url=url_content, headers=headers)
+# post_links_exp = re.compile('class="l3 a3">(<em class="icon icon_list_img"></em> )?<a href="(/news,[0-9]{6},[0-9]{,15}\.html)')
+# post_links = re.findall(post_links_exp, response.text)
+# print(len(post_links), post_links)
+# for i in range(0, len(post_links)):
+#     full_link = "https://guba.eastmoney.com" + post_links[i][1]
+#     print(i + 1, full_link)
+
+
+#
 url = "https://guba.eastmoney.com/news,002074,1025461213.html"
 response = requests.get(url=url, headers=headers)
 

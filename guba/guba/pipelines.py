@@ -6,8 +6,37 @@
 
 # useful for handling different item types with a single interface
 from itemadapter import ItemAdapter
+import pymongo
+from scrapy.exceptions import DropItem
+from twisted.internet import reactor, defer
 
 
-class GubaPipeline:
+class MongoPipeline:
+    def __init__(self, mongo_uri, mongo_db):
+        self.mongo_uri = mongo_uri
+        self.mongo_db = mongo_db
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls(
+            mongo_db=crawler.settings.get("MONGO_DB"),
+            mongo_uri=crawler.settings.get("MONGO_URI")
+        )
+
+    def open_spider(self, spider):
+        self.client = pymongo.MongoClient(self.mongo_uri)
+        self.db = self.client[self.mongo_db]
+
+    def _insert(self, item, out, spider):
+        self.db["Guba_Test2"].insert(dict(item))
+        reactor.callFromThread(out.callback, item)
+
+    @defer.inlineCallbacks
     def process_item(self, item, spider):
-        return item
+        out = defer.Deferred()
+        reactor.callInThread(self._insert, item, out, spider)
+        yield out
+        defer.returnValue(item)
+
+    def close_spider(self, spider):
+        self.client.close()
