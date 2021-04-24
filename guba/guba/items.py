@@ -13,7 +13,6 @@ class GubaItem(Item):
     user_id = Field()
     user_age = Field()
     post_time = Field()
-    post_ip = Field()
     post_click_count = Field()
     post_forward_count = Field()
     post_comment_count = Field()

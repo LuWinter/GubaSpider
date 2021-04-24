@@ -29,7 +29,7 @@ class GubacrawlSpider(Spider):
     post_id_exp = re.compile('/news,[0-9]{6},([0-9]{,15})\.html')
     user_id_exp = re.compile('"user_id":"([0-9]+)')
     user_age_exp = re.compile('"user_age":"(.+)","user_influ_level"')
-    post_time_and_ip_exp = re.compile('"post_display_time":"(.+)","post_ip":"(.*)","post_state"')
+    post_time_exp = re.compile('"post_publish_time":"(.+)","post_last_time"')
     post_info_exp = re.compile('"post_click_count":([0-9]+),"post_forward_count":([0-9]+),"post_comment_count":([0-9]+),"post_comment_authority":([0-9]+),"post_like_count":([0-9]+)')
 
     redis = RedisClient()
@@ -75,9 +75,7 @@ class GubacrawlSpider(Spider):
             postItem["post_id"] = re.search(self.post_id_exp, response.url).group(1)                # 帖子ID
             postItem["user_id"] = re.search(self.user_id_exp, response.text).group(1)               # 发帖人ID
             postItem["user_age"] = re.search(self.user_age_exp, response.text).group(1)             # 发帖人吧龄
-            post_time_and_ip = re.search(self.post_time_and_ip_exp, response.text)
-            postItem["post_time"] = post_time_and_ip.group(1)                                       # 发帖时间
-            postItem["post_ip"] = post_time_and_ip.group(2)                                         # 发帖人IP
+            postItem["post_time"] = re.search(self.post_time_exp, response.text).group(1)           # 发帖时间
             post_info = re.search(self.post_info_exp, response.text)
             postItem["post_click_count"] = post_info.group(1)                                       # 帖子点击量
             postItem["post_forward_count"] = post_info.group(2)                                     # 未知统计量
