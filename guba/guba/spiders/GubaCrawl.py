@@ -75,7 +75,7 @@ class GubacrawlSpider(Spider):
             postItem["post_from"] = post_info["post_from"]                                          # 发帖平台
             if postItem["post_comment_count"] != '0':                                               # 如果有评论，则爬取评论链接
                 self.request_form_data["param"] = "postid=%s&sort=1&sorttype=1&p=1&ps=30" % postItem["post_id"]
-                self.headers["Referer"] = 'https://guba.eastmoney.com/news,002074,%s.html' % postItem["post_id"]
+                self.headers["Referer"] = response.url
                 comment_url = "https://guba.eastmoney.com/interface/GetData.aspx"
                 comment_request = FormRequest(url=comment_url, formdata=self.request_form_data,
                                               headers=self.headers, callback=self.get_comment)
