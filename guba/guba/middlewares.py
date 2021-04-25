@@ -4,7 +4,12 @@
 # https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 
 from scrapy import signals
-
+from twisted.internet.error import TimeoutError, ConnectionRefusedError, \
+    ConnectError, ConnectionLost, TCPTimedOutError
+from twisted.internet import defer
+from scrapy.core.downloader.handlers.http11 import TunnelError
+from .ProxyPool.db import RedisClient
+from scrapy import Request
 # useful for handling different item types with a single interface
 from itemadapter import is_item, ItemAdapter
 
@@ -56,10 +61,14 @@ class GubaSpiderMiddleware:
         spider.logger.info('Spider opened: %s' % spider.name)
 
 
-class GubaDownloaderMiddleware:
+class GubaDownloaderMiddleware:                                        
     # Not all methods need to be defined. If a method is not defined,
     # scrapy acts as if the downloader middleware does not modify the
     # passed objects.
+
+    ALL_EXCEPTIONS = (defer.TimeoutError, TimeoutError, ConnectionRefusedError,
+                      ConnectError, ConnectionLost, TCPTimedOutError, TunnelError)
+    redis = RedisClient()
 
     @classmethod
     def from_crawler(cls, crawler):
@@ -81,23 +90,23 @@ class GubaDownloaderMiddleware:
         return None
 
     def process_response(self, request, response, spider):
-        # Called with the response returned from the downloader.
-
-        # Must either;
-        # - return a Response object
-        # - return a Request object
-        # - or raise IgnoreRequest
+        if str(response.status).startswith('4') or str(response.status).startswith('5'):
+            proxy = request.meta["proxy"].lstrip("https://")
+            self.redis.delete(proxy)
+            print("剔除代理", proxy)
+            request.meta["proxy"] = self.redis.random()
+            return request
         return response
 
     def process_exception(self, request, exception, spider):
-        # Called when a download handler or a process_request()
-        # (from other downloader middleware) raises an exception.
-
-        # Must either:
-        # - return None: continue processing this exception
-        # - return a Response object: stops process_exception() chain
-        # - return a Request object: stops process_exception() chain
-        pass
+        if isinstance(exception, self.ALL_EXCEPTIONS):
+            print('Got %s while getting %s' % (exception, request.url))
+            proxy = request.meta["proxy"].lstrip("https://")
+            self.redis.delete(proxy)
+            print("剔除代理", proxy)
+            request.meta["proxy"] = self.redis.random()
+            return request
+        print("Not prepared exceptions:", exception)
 
     def spider_opened(self, spider):
         spider.logger.info('Spider opened: %s' % spider.name)

@@ -73,5 +73,17 @@ UA = ["Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; AcooBrowser; .NET
 "Mozilla/5.0 (X11; Linux i686; rv:2.0b3pre) Gecko/20100731 Firefox/4.0b3pre",
 "Mozilla/5.0 (Windows NT 5.2; rv:2.0b13pre) Gecko/20110304 Firefox/4.0b13pre",
 "Mozilla/5.0 (Windows NT 5.1; rv:2.0b13pre) Gecko/20110223 Firefox/4.0b13pre",
-"Mozilla/5.0 (X11; Linux i686; rv:2.0b12pre) Gecko/20100101 Firefox/4.0b12pre"
-]
+"Mozilla/5.0 (X11; Linux i686; rv:2.0b12pre) Gecko/20100101 Firefox/4.0b12pre"]
+
+request_form_data = {
+        'param': 'postid=1025461213&sort=1&sorttype=1&p=1&ps=30',
+        'path': 'reply/api/Reply/ArticleNewReplyList',
+        'env': '2'
+}
+
+headers = {
+        'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.182 Safari/537.36 Edg/88.0.705.74",
+        'Origin': 'https://guba.eastmoney.com',
+        'Referer': 'https://guba.eastmoney.com/list,002074.html',
+        'Host': 'guba.eastmoney.com'
+}

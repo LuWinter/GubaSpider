@@ -44,3 +44,8 @@ class Getter:
             else:
                 print("代理池已满")
                 break
+
+
+if __name__ == "__main__":
+    getter = Getter()
+    getter.run()
