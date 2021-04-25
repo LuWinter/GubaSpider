@@ -2,7 +2,7 @@ import redis
 
 REDIS_HOST = "localhost"
 REDIS_PORT = 6379
-REDIS_PASSWORD = None
+REDIS_PASSWORD = 200054
 REDIS_KEY = "proxies"
 
 
