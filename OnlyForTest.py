@@ -1,4 +1,3 @@
-from time import time
 import requests
 import re
 from lxml import etree
@@ -18,39 +17,6 @@ headers_comment = {
     'Referer': 'https://guba.eastmoney.com/news,002074,1025461213.html',
     'Host': 'guba.eastmoney.com'
 }
-# response = requests.get(url="https://guba.eastmoney.com/list,002074_2.html", headers=headers)
-# start = time()
-# pattern = re.compile('/news,.{,20}\.html')
-# post_links = re.findall(pattern, response.text)
-# end = time()
-# print("RE method spends %s second" % (end - start))
-#
-# start2 = time()
-# content = etree.HTML(response.text)
-# post_links2 = content.xpath("//div[@class='articleh normal_post']/span[@class='l3 a3']/a/@href")
-# end2 = time()
-# print("Xpath method spends %s second" % (end2 - start2))
-#
-# response = requests.get(url="https://guba.eastmoney.com/news,002074,1025367456.html", headers=headers)
-# content = etree.HTML(response.text)
-# start = time()
-# signal = content.xpath("//span[@id='stockname']/@data-popstock")
-# end = time()
-# print(signal)
-# print("Xpath method spends %s second" % (end - start))
-#
-# start2 = time()
-# re_express = 'data-popstock="002074'
-# pattern = re.compile(re_express)
-# signal2 = re.findall(pattern, response.text)
-# end2 = time()
-# if signal2:
-#     print("RE find it : ", signal2[1])
-# print("RE method spends %s second" % (end2 - start2))
-#
-# time1 = end - start
-# time2 = end2 - start2
-# print(time1 < time2)
 
 
 # 这一段用于测试正则提取帖子链接
@@ -64,7 +30,7 @@ headers_comment = {
 #     print(i + 1, full_link)
 
 
-#
+# 这一段是混合了XPATH和正则的页面解析代码
 url = "https://guba.eastmoney.com/news,002074,1025461213.html"
 response = requests.get(url=url, headers=headers)
 

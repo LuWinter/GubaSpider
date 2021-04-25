@@ -1,5 +1,5 @@
 import requests
-from .db import RedisClient
+from guba.guba.ProxyPool.db import RedisClient
 import time
 
 POOL_UPPER_THRESHOLD = 300

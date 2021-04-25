@@ -5,7 +5,7 @@
 
 from scrapy import signals
 from twisted.internet.error import TimeoutError, ConnectionRefusedError, \
-    ConnectError, ConnectionLost, TCPTimedOutError
+    ConnectError, ConnectionLost, TCPTimedOutError, ConnectionDone
 from twisted.internet import defer
 from scrapy.core.downloader.handlers.http11 import TunnelError
 from .ProxyPool.db import RedisClient
@@ -61,12 +61,12 @@ class GubaSpiderMiddleware:
         spider.logger.info('Spider opened: %s' % spider.name)
 
 
-class GubaDownloaderMiddleware:                                        
+class GubaDownloaderMiddleware:
     # Not all methods need to be defined. If a method is not defined,
     # scrapy acts as if the downloader middleware does not modify the
     # passed objects.
 
-    ALL_EXCEPTIONS = (defer.TimeoutError, TimeoutError, ConnectionRefusedError,
+    ALL_EXCEPTIONS = (defer.TimeoutError, TimeoutError, ConnectionRefusedError, ConnectionDone,
                       ConnectError, ConnectionLost, TCPTimedOutError, TunnelError)
     redis = RedisClient()
 
@@ -93,17 +93,15 @@ class GubaDownloaderMiddleware:
         if str(response.status).startswith('4') or str(response.status).startswith('5'):
             proxy = request.meta["proxy"].lstrip("https://")
             self.redis.delete(proxy)
-            print("剔除代理", proxy)
             request.meta["proxy"] = self.redis.random()
             return request
         return response
 
     def process_exception(self, request, exception, spider):
         if isinstance(exception, self.ALL_EXCEPTIONS):
-            print('Got %s while getting %s' % (exception, request.url))
+            print('Got %s' % exception)
             proxy = request.meta["proxy"].lstrip("https://")
             self.redis.delete(proxy)
-            print("剔除代理", proxy)
             request.meta["proxy"] = self.redis.random()
             return request
         print("Not prepared exceptions:", exception)

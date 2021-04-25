@@ -14,7 +14,7 @@ class GubacrawlSpider(Spider):
     start_urls = ['http://guba.eastmoney.com/']
 
     stoke_code = "002074"
-    web_page_count = 3
+    web_page_count = 10
 
     redis = RedisClient()
     USER_AGENTS = UA
@@ -22,7 +22,7 @@ class GubacrawlSpider(Spider):
     request_form_data = request_form_data
 
     def start_requests(self):
-        for i in range(1, self.web_page_count):
+        for i in range(1, self.web_page_count + 1):
             base_url = "https://guba.eastmoney.com/list,%s_%s.html" % (self.stoke_code, i)
             request = Request(url=base_url, callback=self.parse)
             request.meta["stoke_code"] = self.stoke_code
@@ -44,7 +44,7 @@ class GubacrawlSpider(Spider):
                 page_request = self.add_headers(page_request)
                 yield page_request
         else:
-            print("垃圾页面！\n剔除代理", response.meta["proxy"])
+            print("垃圾页面！")
             self.redis.delete(response.meta["proxy"].lstrip("https://"))
             request = Request(url=response.url, callback=self.parse)
             request.meta["stoke_code"] = stoke_code
@@ -84,11 +84,11 @@ class GubacrawlSpider(Spider):
                 yield comment_request
             else:
                 postItem["comment_list"] = []                                                       # 没有评论就返回空
-                print("成功获取帖子", postItem["post_id"])
-                print(postItem)
+                print("%s 成功获取 %s在 %s的帖子 %s" % (
+                    self.name, postItem["stoke_code"], postItem["post_time"], postItem["post_id"]))
                 yield postItem
         else:
-            print("垃圾页面！\n剔除代理", response.meta["proxy"])
+            print("垃圾页面！")
             self.redis.delete(response.meta["proxy"].lstrip("https://"))
             self.headers["Referer"] = "https://guba.eastmoney.com/list,%s.html" % stoke_code
             page_request = Request(url=response.url, callback=self.page_parse, headers=self.headers)
@@ -110,11 +110,11 @@ class GubacrawlSpider(Spider):
                 new_item["child_reply_count"] = comment["reply_count"]
                 new_comment.append(new_item)
             postItem["comment_list"] = new_comment
-            print("成功获取帖子", postItem["post_id"])
-            print(postItem)
+            print("%s 成功获取 %s在 %s的帖子 %s" % (
+                self.name, postItem["stoke_code"], postItem["post_time"], postItem["post_id"]))
             yield postItem
         else:
-            print("提取评论失败！\n剔除代理", response.meta["proxy"])
+            print("提取评论失败！")
             self.redis.delete(response.meta["proxy"].lstrip("https://"))
             self.request_form_data["param"] = "postid=%s&sort=1&sorttype=1&p=1&ps=30" % postItem["post_id"]
             self.headers["Referer"] = 'https://guba.eastmoney.com/news,002074,%s.html' % postItem["post_id"]
