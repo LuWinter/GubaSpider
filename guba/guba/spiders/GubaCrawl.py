@@ -13,21 +13,24 @@ class GubacrawlSpider(Spider):
     allowed_domains = ['guba.eastmoney.com']
     start_urls = ['http://guba.eastmoney.com/']
 
-    stoke_code = "002074"
-    web_page_count = 10
-
-    redis = RedisClient()
+    redis = RedisClient(db_no=0)
+    redis_stoke_code = RedisClient(db_no=1)
     USER_AGENTS = UA
     headers = headers
     request_form_data = request_form_data
 
     def start_requests(self):
-        for i in range(1, self.web_page_count + 1):
-            base_url = "https://guba.eastmoney.com/list,%s_%s.html" % (self.stoke_code, i)
-            request = Request(url=base_url, callback=self.parse)
-            request.meta["stoke_code"] = self.stoke_code
-            request = self.add_headers(request)
-            yield request
+        while self.redis_stoke_code.count() != 0:
+            stoke_code = self.redis_stoke_code.random()
+            web_page_count = self.redis_stoke_code.value(stoke_code)
+            self.redis_stoke_code.delete(stoke_code)
+            print("开始爬取股票%s, 共有%s页" % (stoke_code, web_page_count))
+            for i in range(1, int(web_page_count) + 1):
+                base_url = "https://guba.eastmoney.com/list,%s_%s.html" % (stoke_code, i)
+                request = Request(url=base_url, callback=self.parse)
+                request.meta["stoke_code"] = stoke_code
+                request = self.add_headers(request)
+                yield request
 
     def parse(self, response, **kwargs):
         page_check = re.compile('data-popstock="([0-9]{6})"')
@@ -57,7 +60,7 @@ class GubacrawlSpider(Spider):
         post_info = re.search(post_info_exp, response.text).group(1)
         post_info = json.loads(post_info)
         stoke_code = post_info["post_guba"]["stockbar_code"]
-        if stoke_code == self.stoke_code:                                                           # 通过页面判断此页是否为正常页面
+        if stoke_code == response.meta["stoke_code"]:                                               # 通过页面判断此页是否为正常页面
             postItem["stoke_code"] = stoke_code                                                     # 股票代码
             postItem["post_id"] = post_info["post_id"]                                              # 帖子ID
             postItem["user_id"] = post_info["post_user"]["user_id"]                                 # 发帖人ID
@@ -117,7 +120,7 @@ class GubacrawlSpider(Spider):
             print("提取评论失败！")
             self.redis.delete(response.meta["proxy"].lstrip("https://"))
             self.request_form_data["param"] = "postid=%s&sort=1&sorttype=1&p=1&ps=30" % postItem["post_id"]
-            self.headers["Referer"] = 'https://guba.eastmoney.com/news,002074,%s.html' % postItem["post_id"]
+            self.headers["Referer"] = response.url
             comment_url = "https://guba.eastmoney.com/interface/GetData.aspx"
             comment_request = FormRequest(url=comment_url, formdata=self.request_form_data,
                                           headers=self.headers, callback=self.get_comment)

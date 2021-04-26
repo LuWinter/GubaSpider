@@ -16,14 +16,14 @@ class PoolEmptyError(Exception):
 
 
 class RedisClient(object):
-    def __init__(self, host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD):
+    def __init__(self, host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD, db_no=0):
         """
         初始化
         :param host: Redis 地址
         :param port: Redis 端口
         :param password: Redis 密码
         """
-        self.db = redis.StrictRedis(host=host, port=port, password=password, decode_responses=True)
+        self.db = redis.StrictRedis(host=host, port=port, password=password, decode_responses=True, db=db_no)
 
     def add(self, proxy):
         """
@@ -69,3 +69,10 @@ class RedisClient(object):
         :return: 全部代理列表 (时间戳从2021-01-01到2025-12-31)
         """
         return self.db.keys('*')
+
+    def value(self, key):
+        """
+        获取对应的键值
+        :return: 键值
+        """
+        return self.db.get(key)
