@@ -3,3 +3,4 @@
 /.git
 .gitattributes
 /guba/guba/ProxyPool
+/guba/guba/jobdir

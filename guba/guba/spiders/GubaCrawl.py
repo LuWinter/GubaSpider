@@ -12,6 +12,7 @@ class GubacrawlSpider(Spider):
     name = 'GubaCrawl'
     allowed_domains = ['guba.eastmoney.com']
     start_urls = ['http://guba.eastmoney.com/']
+    custom_settings = {"JOBDIR": "jobdir/1"}
 
     redis = RedisClient(db_no=0)
     redis_stoke_code = RedisClient(db_no=1)
@@ -40,7 +41,7 @@ class GubacrawlSpider(Spider):
             post_links = re.findall(pattern, response.text)
             for post_link in post_links:
                 full_link = "https://guba.eastmoney.com" + post_link[1]
-                print(full_link)
+                print("正在抓取", full_link)
                 self.headers["Referer"] = "https://guba.eastmoney.com/list,%s.html" % stoke_code
                 page_request = Request(url=full_link, callback=self.page_parse, headers=self.headers)
                 page_request.meta["stoke_code"] = stoke_code
