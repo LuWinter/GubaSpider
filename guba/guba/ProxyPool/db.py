@@ -25,13 +25,15 @@ class RedisClient(object):
         """
         self.db = redis.StrictRedis(host=host, port=port, password=password, decode_responses=True, db=db_no)
 
-    def add(self, proxy):
+    def add(self, proxy, value=1, ex=120):
         """
         向redis添加代理，有效时间为120秒
+        :param ex:
+        :param value:
         :param proxy: 代理
         :return: True/False
         """
-        return self.db.set(proxy, 1, ex=120)
+        return self.db.set(proxy, value, ex=ex)
 
     def random(self):
         """

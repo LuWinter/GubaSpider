@@ -9,6 +9,7 @@ from itemadapter import ItemAdapter
 import pymongo
 from scrapy.exceptions import DropItem
 from twisted.internet import reactor, defer
+from .ProxyPool.db import RedisClient
 
 
 class MongoPipeline:
@@ -40,3 +41,19 @@ class MongoPipeline:
 
     def close_spider(self, spider):
         self.client.close()
+
+
+class PageNumberPipeline(object):
+    def open_spider(self, spider):
+        self.redis = RedisClient(db_no=1)
+        self.outf = open("Stoke_Page_Number.txt", "w")
+
+    def process_item(self, item, spider):
+        stoke_code = item["stoke_code"]
+        page_number = item["page_number"]
+        self.redis.add(stoke_code, page_number, ex=None)
+        self.outf.write("%s %s\n" % (stoke_code, page_number))
+        return item
+
+    def close_spider(self, spider):
+        self.outf.close()

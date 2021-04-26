@@ -24,3 +24,8 @@ class GubaItem(Item):
     post_text = Field()
     post_from = Field()
     comment_list = Field()
+
+
+class NumberItem(Item):
+    stoke_code = Field()
+    page_number = Field()
