@@ -13,7 +13,7 @@ SPIDER_MODULES = ['guba.spiders']
 NEWSPIDER_MODULE = 'guba.spiders'
 
 MONGO_URI = 'localhost'
-MONGO_DB = 'quote'
+MONGO_DB = 'guba'
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.128 Safari/537.36 Edg/89.0.774.77'

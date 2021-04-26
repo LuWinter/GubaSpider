@@ -8,6 +8,9 @@ process = CrawlerProcess(get_project_settings())
 process.crawl('GubaCrawl')
 process.crawl('GubaCrawl2')
 process.crawl('GubaCrawl3')
+process.crawl('GubaCrawl4')
+process.crawl('GubaCrawl5')
+process.crawl('GubaCrawl6')
 
 # 执行
 process.start()

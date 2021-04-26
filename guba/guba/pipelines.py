@@ -29,7 +29,7 @@ class MongoPipeline:
         self.db = self.client[self.mongo_db]
 
     def _insert(self, item, out, spider):
-        self.db["Guba_Test2"].insert(dict(item))
+        self.db["Guba_20210426"].insert(dict(item))
         reactor.callFromThread(out.callback, item)
 
     @defer.inlineCallbacks

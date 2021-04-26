@@ -5,6 +5,7 @@ from ..ProxyPool.db import RedisClient
 from ..user_agent_pool import UA, headers, request_form_data
 from random import choice
 import json
+from time import time
 
 
 class GubacrawlSpider(Spider):
@@ -77,6 +78,7 @@ class GubacrawlSpider(Spider):
             postItem["post_title"] = post_info["post_title"]                                        # 帖子标题
             postItem["post_text"] = re.sub(r'<.+?>', '', post_info["post_content"])                 # 帖子正文
             postItem["post_from"] = post_info["post_from"]                                          # 发帖平台
+            postItem["crawl_time"] = time()                                                         # 获取时间
             if postItem["post_comment_count"] != '0':                                               # 如果有评论，则爬取评论链接
                 self.request_form_data["param"] = "postid=%s&sort=1&sorttype=1&p=1&ps=30" % postItem["post_id"]
                 self.headers["Referer"] = response.url
