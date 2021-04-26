@@ -2,7 +2,7 @@ import requests
 from guba.guba.ProxyPool.db import RedisClient
 import time
 
-POOL_UPPER_THRESHOLD = 300
+POOL_UPPER_THRESHOLD = 500
 
 
 class Getter:
