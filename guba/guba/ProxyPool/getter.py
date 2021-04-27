@@ -37,10 +37,14 @@ class Getter:
             if not self.is_over_threshold():
                 present_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
                 print(present_time, " 正在获取代理...")
-                proxies = self.crawl_proxy()
-                for proxy in proxies:
-                    self.redis.add(proxy)
-                time.sleep(10)
+                try:
+                    proxies = self.crawl_proxy()
+                    for proxy in proxies:
+                        self.redis.add(proxy, value=1, ex=300)
+                    time.sleep(10)
+                except:
+                    print("代理池获取器发生错误, 三分钟后进入重试")
+                    time.sleep(180)
             else:
                 print("代理池已满")
                 break

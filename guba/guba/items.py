@@ -24,6 +24,7 @@ class GubaItem(Item):
     post_text = Field()
     post_from = Field()
     comment_list = Field()
+    page_number = Field()
     crawl_time = Field()
 
 

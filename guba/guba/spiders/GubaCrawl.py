@@ -31,6 +31,7 @@ class GubacrawlSpider(Spider):
                 base_url = "https://guba.eastmoney.com/list,%s_%s.html" % (stoke_code, i)
                 request = Request(url=base_url, callback=self.parse)
                 request.meta["stoke_code"] = stoke_code
+                request.meta["page_number"] = i
                 request = self.add_headers(request)
                 yield request
 
@@ -46,6 +47,7 @@ class GubacrawlSpider(Spider):
                 self.headers["Referer"] = "https://guba.eastmoney.com/list,%s.html" % stoke_code
                 page_request = Request(url=full_link, callback=self.page_parse, headers=self.headers)
                 page_request.meta["stoke_code"] = stoke_code
+                page_request.meta["page_number"] = response.meta["page_number"]
                 page_request = self.add_headers(page_request)
                 yield page_request
         else:
@@ -53,6 +55,7 @@ class GubacrawlSpider(Spider):
             self.redis.delete(response.meta["proxy"].lstrip("https://"))
             request = Request(url=response.url, callback=self.parse)
             request.meta["stoke_code"] = stoke_code
+            request.meta["page_number"] = response.meta["page_number"]
             request = self.add_headers(request)
             yield request
 
@@ -78,8 +81,10 @@ class GubacrawlSpider(Spider):
             postItem["post_title"] = post_info["post_title"]                                        # 帖子标题
             postItem["post_text"] = re.sub(r'<.+?>', '', post_info["post_content"])                 # 帖子正文
             postItem["post_from"] = post_info["post_from"]                                          # 发帖平台
+            postItem["page_number"] = response.meta["page_number"]
             postItem["crawl_time"] = time()                                                         # 获取时间
-            if postItem["post_comment_count"] != '0':                                               # 如果有评论，则爬取评论链接
+            comment_number = int(postItem["post_comment_count"])
+            if comment_number != 0:                                                                 # 如果有评论，则爬取评论链接
                 self.request_form_data["param"] = "postid=%s&sort=1&sorttype=1&p=1&ps=30" % postItem["post_id"]
                 self.headers["Referer"] = response.url
                 comment_url = "https://guba.eastmoney.com/interface/GetData.aspx"
@@ -99,6 +104,7 @@ class GubacrawlSpider(Spider):
             self.headers["Referer"] = "https://guba.eastmoney.com/list,%s.html" % stoke_code
             page_request = Request(url=response.url, callback=self.page_parse, headers=self.headers)
             page_request.meta["stoke_code"] = stoke_code
+            page_request.meta["page_number"] = response.meta["page_number"]
             page_request = self.add_headers(page_request)
             yield page_request
 
@@ -123,7 +129,7 @@ class GubacrawlSpider(Spider):
             print("提取评论失败！")
             self.redis.delete(response.meta["proxy"].lstrip("https://"))
             self.request_form_data["param"] = "postid=%s&sort=1&sorttype=1&p=1&ps=30" % postItem["post_id"]
-            self.headers["Referer"] = response.url
+            self.headers["Referer"] = "https://guba.eastmoney.com/news,%s,%s.html" % (postItem["stoke_code"], postItem["post_id"])
             comment_url = "https://guba.eastmoney.com/interface/GetData.aspx"
             comment_request = FormRequest(url=comment_url, formdata=self.request_form_data,
                                           headers=self.headers, callback=self.get_comment)
