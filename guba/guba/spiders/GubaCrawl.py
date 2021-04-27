@@ -112,19 +112,23 @@ class GubacrawlSpider(Spider):
         postItem = response.meta["item"]
         if response.status == 200:
             comment_list = json.loads(response.text)['re']
-            new_comment = []
-            for comment in comment_list:
-                new_item = dict()
-                new_item["reply_id"] = comment["reply_id"]
-                new_item["reply_time"] = comment["reply_publish_time"]
-                new_item["reply_user"] = comment["user_id"]
-                new_item["reply_text"] = comment["reply_text"]
-                new_item["child_reply_count"] = comment["reply_count"]
-                new_comment.append(new_item)
-            postItem["comment_list"] = new_comment
-            print("%s 成功获取 %s在 %s的帖子 %s" % (
-                self.name, postItem["stoke_code"], postItem["post_time"], postItem["post_id"]))
-            yield postItem
+            if comment_list is not None:
+                new_comment = []
+                for comment in comment_list:
+                    new_item = dict()
+                    new_item["reply_id"] = comment["reply_id"]
+                    new_item["reply_time"] = comment["reply_publish_time"]
+                    new_item["reply_user"] = comment["user_id"]
+                    new_item["reply_text"] = comment["reply_text"]
+                    new_item["child_reply_count"] = comment["reply_count"]
+                    new_comment.append(new_item)
+                postItem["comment_list"] = new_comment
+                print("%s 成功获取 %s在 %s的帖子 %s" % (
+                    self.name, postItem["stoke_code"], postItem["post_time"], postItem["post_id"]))
+                yield postItem
+            else:
+                print("此评论被关闭")
+                yield postItem
         else:
             print("提取评论失败！")
             self.redis.delete(response.meta["proxy"].lstrip("https://"))
