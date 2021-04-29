@@ -9,6 +9,8 @@ from twisted.internet.error import TimeoutError, ConnectionRefusedError, \
 from twisted.internet import defer
 from scrapy.core.downloader.handlers.http11 import TunnelError
 from .ProxyPool.db import RedisClient
+from random import choice
+from .user_agent_pool import UA
 from scrapy import Request
 # useful for handling different item types with a single interface
 from itemadapter import is_item, ItemAdapter
@@ -68,7 +70,8 @@ class GubaDownloaderMiddleware:
 
     ALL_EXCEPTIONS = (defer.TimeoutError, TimeoutError, ConnectionRefusedError, ConnectionDone,
                       ConnectError, ConnectionLost, TCPTimedOutError, TunnelError)
-    redis = RedisClient()
+    redis = RedisClient(db_no=0)
+    USER_AGENTS = UA
 
     @classmethod
     def from_crawler(cls, crawler):
@@ -78,15 +81,10 @@ class GubaDownloaderMiddleware:
         return s
 
     def process_request(self, request, spider):
-        # Called for each request that goes through the downloader
-        # middleware.
-
-        # Must either:
-        # - return None: continue processing this request
-        # - or return a Response object
-        # - or return a Request object
-        # - or raise IgnoreRequest: process_exception() methods of
-        #   installed downloader middleware will be called
+        proxy = self.redis.random()
+        request.meta["proxy"] = "https://" + proxy
+        user_agent = choice(self.USER_AGENTS)
+        request.headers.setdefault('User-Agent', user_agent)
         return None
 
     def process_response(self, request, response, spider):

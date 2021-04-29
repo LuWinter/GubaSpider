@@ -2,7 +2,7 @@ import requests
 from guba.guba.ProxyPool.db import RedisClient
 import time
 
-POOL_UPPER_THRESHOLD = 500
+POOL_UPPER_THRESHOLD = 1000
 
 
 class Getter:
@@ -12,15 +12,20 @@ class Getter:
     @staticmethod
     def crawl_proxy():
         """
-        获取10个代理
+        这里使用的是星速云代理，获取存活时间在20秒以上的代理
         :return: 代理
         """
-        proxy_url = """
-        http://ip.16yun.cn:817/myip/pl/f13027d7-7416-4f3d-9405-c8052b6ae8a4/?s=fswdxsblnx&u=1352252075%40qq.com&format=line
-        """
-        html = requests.get(proxy_url)
-        proxies = html.text.split("\r\n")
-        return proxies
+        proxy_url = "http://user.xingsudaili.com:25435/jeecg-boot/extractIp/s?uid=1387210378204246017&orderNumber=CN2021042809134535&number=30&wt=text&randomFlag=false&detailFlag=true&useTime=20&region="
+
+        response = requests.get(url=proxy_url)
+        proxy_list = response.text.split(sep="<br>")
+        new_proxy_list = []
+        for proxy in proxy_list:
+            proxy_info = proxy.split(sep=",")
+            proxy_use_time = int(proxy_info[4]) - time.time() - 7
+            proxy = (proxy_info[0], int(proxy_use_time))
+            new_proxy_list.append(proxy)
+        return new_proxy_list
 
     def is_over_threshold(self):
         """
@@ -40,11 +45,11 @@ class Getter:
                 try:
                     proxies = self.crawl_proxy()
                     for proxy in proxies:
-                        self.redis.add(proxy, value=1, ex=300)
-                    time.sleep(10)
+                        self.redis.add(proxy[0], value=1, ex=proxy[1])
+                    time.sleep(4)
                 except:
-                    print("代理池获取器发生错误, 三分钟后进入重试")
-                    time.sleep(180)
+                    print("代理池获取器发生错误, 30秒后进入重试")
+                    time.sleep(30)
             else:
                 print("代理池已满")
                 break

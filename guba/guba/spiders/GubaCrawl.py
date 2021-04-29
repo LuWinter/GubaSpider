@@ -2,8 +2,7 @@ from scrapy import Request, Spider, FormRequest
 import re
 from ..items import GubaItem
 from ..ProxyPool.db import RedisClient
-from ..user_agent_pool import UA, headers, request_form_data
-from random import choice
+from ..user_agent_pool import headers, request_form_data
 import json
 from time import time
 
@@ -17,7 +16,6 @@ class GubacrawlSpider(Spider):
 
     redis = RedisClient(db_no=0)
     redis_stoke_code = RedisClient(db_no=2)
-    USER_AGENTS = UA
     headers = headers
     request_form_data = request_form_data
 
@@ -32,7 +30,6 @@ class GubacrawlSpider(Spider):
                 request = Request(url=base_url, callback=self.parse)
                 request.meta["stoke_code"] = stoke_code
                 request.meta["page_number"] = i
-                request = self.add_headers(request)
                 yield request
 
     def parse(self, response, **kwargs):
@@ -48,7 +45,6 @@ class GubacrawlSpider(Spider):
                 page_request = Request(url=full_link, callback=self.page_parse, headers=self.headers)
                 page_request.meta["stoke_code"] = stoke_code
                 page_request.meta["page_number"] = response.meta["page_number"]
-                page_request = self.add_headers(page_request)
                 yield page_request
         else:
             print("垃圾页面！")
@@ -56,7 +52,6 @@ class GubacrawlSpider(Spider):
             request = Request(url=response.url, callback=self.parse)
             request.meta["stoke_code"] = stoke_code
             request.meta["page_number"] = response.meta["page_number"]
-            request = self.add_headers(request)
             yield request
 
     def page_parse(self, response):
@@ -92,7 +87,6 @@ class GubacrawlSpider(Spider):
                     comment_request = FormRequest(url=comment_url, formdata=self.request_form_data,
                                                 headers=self.headers, callback=self.get_comment)
                     comment_request.meta["item"] = postItem                                             # 向下一层请求传递参数
-                    comment_request = self.add_headers(comment_request)
                     yield comment_request
                 else:
                     postItem["comment_list"] = []                                                       # 没有评论就返回空
@@ -106,10 +100,9 @@ class GubacrawlSpider(Spider):
                 page_request = Request(url=response.url, callback=self.page_parse, headers=self.headers)
                 page_request.meta["stoke_code"] = stoke_code
                 page_request.meta["page_number"] = response.meta["page_number"]
-                page_request = self.add_headers(page_request)
                 yield page_request
         else:
-            print("无效页面！")
+            print("无效页面！" + response.url)
 
     def get_comment(self, response):
         postItem = response.meta["item"]
@@ -141,12 +134,5 @@ class GubacrawlSpider(Spider):
             comment_request = FormRequest(url=comment_url, formdata=self.request_form_data,
                                           headers=self.headers, callback=self.get_comment)
             comment_request.meta["item"] = postItem                                             # 向下一层请求传递参数
-            comment_request = self.add_headers(comment_request)
             yield comment_request
 
-    def add_headers(self, request):
-        proxy = self.redis.random()
-        request.meta['proxy'] = "https://" + proxy
-        user_agent = choice(self.USER_AGENTS)
-        request.headers.setdefault('User-Agent', user_agent)
-        return request

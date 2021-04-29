@@ -20,7 +20,7 @@ USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTM
 
 # Obey robots.txt rules
 ROBOTSTXT_OBEY = False
-CONCURRENT_REQUESTS = 128
+CONCURRENT_REQUESTS = 16
 DOWNLOAD_TIMEOUT = 10
 REDIRECT_ENABLED = False
 RETRY_ENABLED = False
@@ -58,7 +58,7 @@ LOG_LEVEL = 'INFO'
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 DOWNLOADER_MIDDLEWARES = {
-   'guba.middlewares.GubaDownloaderMiddleware': 543,
+   'guba.middlewares.GubaDownloaderMiddleware': 801,
 }
 
 # Enable or disable extensions
