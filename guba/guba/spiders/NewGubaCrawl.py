@@ -75,9 +75,10 @@ class NewgubacrawlSpider(Spider):
                                                       headers=self.headers, callback=self.get_comment)
                         comment_request.meta["item"] = postItem                              # 向下一层请求传递参数
                         yield comment_request
-                    print("%s 成功获取 %s在 %s的帖子 %s" % (
-                        self.name, postItem["stoke_code"], postItem["post_time"], postItem["post_id"]))
-                    yield postItem
+                    else:
+                        print("%s 成功获取 %s在 %s的帖子 %s" % (
+                            self.name, postItem["stoke_code"], postItem["post_time"], postItem["post_id"]))
+                        yield postItem
         else:
             print("垃圾页面！")
             self.redis.delete(response.meta["proxy"].lstrip("https://"))
