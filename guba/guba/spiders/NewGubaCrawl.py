@@ -11,7 +11,7 @@ class NewgubacrawlSpider(Spider):
     name = 'NewGubaCrawl'
     allowed_domains = ['guba.eastmoney.com']
     start_urls = ['http://guba.eastmoney.com/']
-    custom_settings = {"JOBDIR": "jobdir/1"}
+    # custom_settings = {"JOBDIR": "jobdir/1"}
 
     redis = RedisClient(db_no=0)
     redis_stoke_code = RedisClient(db_no=2)
@@ -54,7 +54,7 @@ class NewgubacrawlSpider(Spider):
                     postItem["post_id"] = re.search(id_pattern, link).group(2)
                     author = re.search(author_pattern, item)
                     if author is not None:
-                        postItem["user_id"] = author
+                        postItem["user_id"] = author.group(1)
                     post_time = re.search(time_pattern, item).group(1)
                     postItem["post_time"] = self.add_year(postItem["post_id"], post_time)
                     postItem["post_click_count"] = re.search(read_pattern, item).group(1)
@@ -76,6 +76,8 @@ class NewgubacrawlSpider(Spider):
                                                       headers=self.headers, callback=self.get_comment)
                         comment_request.meta["item"] = postItem                              # 向下一层请求传递参数
                         yield comment_request
+                    print("%s 成功获取 %s在 %s的帖子 %s" % (
+                        self.name, postItem["stoke_code"], postItem["post_time"], postItem["post_id"]))
                     yield postItem
         else:
             print("垃圾页面！")
@@ -96,6 +98,8 @@ class NewgubacrawlSpider(Spider):
                 postItem["post_text"] = re.sub(r'<.+?>', '', post_info["post_content"])      # 帖子正文
                 postItem["post_comment_count"] = post_info["post_comment_count"]             # 帖子评论量
                 if int(postItem["post_comment_count"]) == 0:
+                    print("%s 成功获取 %s在 %s的帖子 %s" % (
+                        self.name, postItem["stoke_code"], postItem["post_time"], postItem["post_id"]))
                     yield postItem
                 else:
                     self.request_form_data["param"] = "postid=%s&sort=1&sorttype=1&p=1&ps=30" % postItem["post_id"]
