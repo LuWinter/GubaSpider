@@ -8,7 +8,7 @@
 #     name = 'GubaCrawl%s'
 #     custom_settings = {'JOBDIR': 'jobdir/%s'}\n"""
 #
-# for i in range(7, 21):
+# for i in range(2, 21):
 #     file = open("./GubaCrawl%s.py" % i, "a")
 #     file_content = file_text % (i, i, i)
 #     file.write(file_content)

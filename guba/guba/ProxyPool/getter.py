@@ -1,5 +1,5 @@
 import requests
-from guba.guba.ProxyPool.db import RedisClient
+from guba.guba.ProxyPool.db import RedisClient, PoolEmptyError
 import time
 
 POOL_UPPER_THRESHOLD = 1000
@@ -53,12 +53,15 @@ class Getter:
                 print(present_time, " 正在获取代理...")
                 try:
                     self.crawl_xundaili_proxy()
+                except PoolEmptyError:
+                    print("代理池获取器关闭")
+                    break
                 except Exception:
                     print("代理池获取器发生错误, 30秒后进入重试")
                     time.sleep(30)
             else:
-                print("代理池已满")
-                break
+                print("代理池已满，30秒后开始继续获取代理")
+                time.sleep(30)
 
 
 if __name__ == "__main__":

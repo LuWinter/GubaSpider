@@ -1,7 +1,8 @@
-Twisted==18.7.0
-lxml==4.6.3
-pymongo==3.11.3
-Scrapy==2.4.1
-requests==2.19.1
+Twisted~=20.3.0
+lxml~=4.5.0
+pymongo~=3.10.1
+Scrapy~=2.5.0
+requests~=2.22.0
 itemadapter==0.2.0
 redis==3.5.3
+aiohttp~=3.7.3

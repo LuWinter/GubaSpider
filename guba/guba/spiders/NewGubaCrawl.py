@@ -4,8 +4,7 @@ from ..items import GubaItem
 from ..ProxyPool.db import RedisClient
 from ..user_agent_pool import headers, request_form_data
 import json
-import requests
-# from time import time
+import aiohttp
 
 
 class NewgubacrawlSpider(Spider):
@@ -60,20 +59,19 @@ class NewgubacrawlSpider(Spider):
                     postItem["post_time"] = self.add_year(postItem["post_id"], post_time)
                     postItem["post_click_count"] = re.search(read_pattern, item).group(1)
                     text = re.search(text_pattern, item).group(1)
-                    if len(text) == 40:
-                        self.headers["Referer"] = "https://guba.eastmoney.com/list,%s.html" % stoke_code
-                        postItem["post_text"] = self.get_text(page_url="https://guba.eastmoney.com" + link,
-                                                              page_headers=self.headers, page_stoke_code=stoke_code, short_text=text)
+                    if len(text) == 40:                                                     # 字数不足就要补齐
+                        postItem["post_text"] = self.get_text(page_url="http://guba.eastmoney.com" + link,  # 请求http链接
+                                                              page_stoke_code=stoke_code, short_text=text)
                     else:
                         postItem["post_text"] = text
                     postItem["post_comment_count"] = re.search(comment_pattern, item).group(1)
-                    if int(postItem["post_comment_count"]) > 0:
+                    if int(postItem["post_comment_count"]) > 0:                             # 评论量不为0就要请求评论
                         self.request_form_data["param"] = "postid=%s&sort=1&sorttype=1&p=1&ps=30" % postItem["post_id"]
                         self.headers["Referer"] = "https://guba.eastmoney.com" + link
-                        comment_url = "https://guba.eastmoney.com/interface/GetData.aspx"
-                        comment_request = FormRequest(url=comment_url, formdata=self.request_form_data,
-                                                      headers=self.headers, callback=self.get_comment)
-                        comment_request.meta["item"] = postItem                              # 向下一层请求传递参数
+                        comment_request = FormRequest(url="https://guba.eastmoney.com/interface/GetData.aspx",
+                                                      formdata=self.request_form_data, headers=self.headers,
+                                                      callback=self.get_comment)
+                        comment_request.meta["item"] = postItem                             # 向下一层请求传递参数
                         yield comment_request
                     else:
                         print("%s 成功获取 %s在 %s的帖子 %s" % (
@@ -87,18 +85,20 @@ class NewgubacrawlSpider(Spider):
             request.meta["page_number"] = response.meta["page_number"]
             yield request
 
-    def get_text(self, page_url, page_headers, page_stoke_code, short_text):
+    async def get_text(self, page_url, page_stoke_code, short_text):
         try:
-            proxy = self.redis.random()
-            proxies = {'http': 'http://%s' % proxy, 'https': 'https://%s' % proxy}
-            response = requests.get(url=page_url, headers=page_headers, proxies=proxies, timeout=7)
+            self.headers["Referer"] = "https://guba.eastmoney.com/list,%s.html" % page_stoke_code
+            proxy = 'http://%s' % self.redis.random()
             post_info_exp = re.compile('"post":(.+),"rc"')
-            post_info = re.search(post_info_exp, response.text)
-            if post_info is not None:
-                post_info = json.loads(post_info.group(1))
-                stoke_code = post_info["post_guba"]["stockbar_code"]
-                if stoke_code == page_stoke_code:                                                # 通过页面判断此页是否为正常页面
-                    return re.sub(r'<.+?>', '', post_info["post_content"])                       # 帖子正文
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url=page_url, proxy=proxy, headers=self.headers) as resp:
+                    response = await resp.text()
+                    post_info = re.search(post_info_exp, response)
+                    if post_info is not None:
+                        post_info = json.loads(post_info.group(1))
+                        stoke_code = post_info["post_guba"]["stockbar_code"]
+                        if stoke_code == page_stoke_code:  # 通过页面判断此页是否为正常页面
+                            return re.sub(r'<.+?>', '', post_info["post_content"])
         except Exception:
             return short_text
 
