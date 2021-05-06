@@ -5,13 +5,14 @@ from ..ProxyPool.db import RedisClient
 from ..user_agent_pool import headers, request_form_data
 import json
 import aiohttp
+import asyncio
 
 
 class NewgubacrawlSpider(Spider):
     name = 'NewGubaCrawl'
     allowed_domains = ['guba.eastmoney.com']
     start_urls = ['http://guba.eastmoney.com/']
-    # custom_settings = {"JOBDIR": "jobdir/1"}
+    custom_settings = {"JOBDIR": "jobdir/1"}
 
     redis = RedisClient(db_no=0)
     redis_stoke_code = RedisClient(db_no=2)
@@ -59,11 +60,15 @@ class NewgubacrawlSpider(Spider):
                     postItem["post_time"] = self.add_year(postItem["post_id"], post_time)
                     postItem["post_click_count"] = re.search(read_pattern, item).group(1)
                     text = re.search(text_pattern, item).group(1)
-                    if len(text) == 40:                                                     # 字数不足就要补齐
-                        postItem["post_text"] = self.get_text(page_url="http://guba.eastmoney.com" + link,  # 请求http链接
-                                                              page_stoke_code=stoke_code, short_text=text)
-                    else:
-                        postItem["post_text"] = text
+                    # if len(text) == 40:                                                     # 字数不足就要补齐
+                    #     loop = asyncio.get_event_loop()
+                    #     task = loop.create_task(
+                    #         self.get_text(page_url="http://guba.eastmoney.com" + link,      # 请求http链接
+                    #         page_stoke_code=stoke_code, short_text=text))
+                    #     postItem["post_text"] = loop.run_until_complete(task)
+                    # else:
+                    #     postItem["post_text"] = text
+                    postItem["post_text"] = text
                     postItem["post_comment_count"] = re.search(comment_pattern, item).group(1)
                     if int(postItem["post_comment_count"]) > 0:                             # 评论量不为0就要请求评论
                         self.request_form_data["param"] = "postid=%s&sort=1&sorttype=1&p=1&ps=30" % postItem["post_id"]
@@ -76,6 +81,7 @@ class NewgubacrawlSpider(Spider):
                     else:
                         print("%s 成功获取 %s在 %s的帖子 %s" % (
                             self.name, postItem["stoke_code"], postItem["post_time"], postItem["post_id"]))
+                        # print("1->", postItem)
                         yield postItem
         else:
             print("垃圾页面！")
@@ -91,14 +97,15 @@ class NewgubacrawlSpider(Spider):
             proxy = 'http://%s' % self.redis.random()
             post_info_exp = re.compile('"post":(.+),"rc"')
             async with aiohttp.ClientSession() as session:
-                async with session.get(url=page_url, proxy=proxy, headers=self.headers) as resp:
+                async with session.get(url=page_url, proxy=proxy, headers=self.headers, timeout=3) as resp:
                     response = await resp.text()
                     post_info = re.search(post_info_exp, response)
                     if post_info is not None:
                         post_info = json.loads(post_info.group(1))
                         stoke_code = post_info["post_guba"]["stockbar_code"]
                         if stoke_code == page_stoke_code:  # 通过页面判断此页是否为正常页面
-                            return re.sub(r'<.+?>', '', post_info["post_content"])
+                            full_text = re.sub(r'<.+?>', '', post_info["post_content"])
+                            return full_text.strip()
         except Exception:
             return short_text
 
@@ -119,9 +126,11 @@ class NewgubacrawlSpider(Spider):
                 postItem["comment_list"] = new_comment
                 print("%s 成功获取 %s在 %s的帖子 %s" % (
                     self.name, postItem["stoke_code"], postItem["post_time"], postItem["post_id"]))
+                # print("2->", postItem)
                 yield postItem
             else:
                 print("此评论被关闭")
+                # print("3->", postItem)
                 yield postItem
         else:
             print("提取评论失败！")

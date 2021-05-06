@@ -34,6 +34,20 @@ class Getter:
         for proxy in proxy_list:
             proxy_info = proxy["ip"] + ":" + proxy["port"]
             self.redis.add(proxy_info, value=1, ex=290)
+        print("成功获取%s个代理" % len(proxy_list))
+        time.sleep(10)
+
+    def crawl_yiniuyun_proxy(self):
+        """
+        抓取亿牛云代理，有效时长为2分钟
+        :return: 代理
+        """
+        proxy_url = "http://ip.16yun.cn:817/myip/pl/16938025-b3b0-4b21-b458-946ab5a619b6/?s=kqipittuiz&u=1352252075%40qq.com"
+        response = requests.get(url=proxy_url)
+        proxy_list = response.text.split(sep="\r\n")
+        for proxy in proxy_list:
+            self.redis.add(proxy=proxy, value=1, ex=115)
+        print("成功获取%s个代理" % len(proxy_list))
         time.sleep(10)
 
     def is_over_threshold(self):
@@ -52,7 +66,7 @@ class Getter:
                 present_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
                 print(present_time, " 正在获取代理...")
                 try:
-                    self.crawl_xundaili_proxy()
+                    self.crawl_yiniuyun_proxy()
                 except PoolEmptyError:
                     print("代理池获取器关闭")
                     break
