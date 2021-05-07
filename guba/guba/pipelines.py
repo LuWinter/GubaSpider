@@ -29,7 +29,7 @@ class MongoPipeline:
         self.db = self.client[self.mongo_db]
 
     def _insert(self, item, out, spider):
-        self.db["Guba_Test_Batch_20210504"].insert(dict(item))
+        self.db["Guba_Test_Batch_20210506"].insert(dict(item))
         reactor.callFromThread(out.callback, item)
 
     @defer.inlineCallbacks
@@ -38,6 +38,34 @@ class MongoPipeline:
         reactor.callInThread(self._insert, item, out, spider)
         yield out
         defer.returnValue(item)
+
+    def close_spider(self, spider):
+        self.client.close()
+
+
+class MongoBulkPipeline:
+    def __init__(self, mongo_uri, mongo_db):
+        self.mongo_uri = mongo_uri
+        self.mongo_db = mongo_db
+        self.item_list = []
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls(
+            mongo_db=crawler.settings.get("MONGO_DB"),
+            mongo_uri=crawler.settings.get("MONGO_URI")
+        )
+
+    def open_spider(self, spider):
+        self.client = pymongo.MongoClient(self.mongo_uri)
+        self.db = self.client[self.mongo_db]
+
+    def process_item(self, item, spider):
+        if len(self.item_list) < 300:
+            self.item_list.append(dict(item))
+        else:
+            self.db["Guba_First_Batch_20210506"].insert_many(self.item_list)
+            self.item_list = []
 
     def close_spider(self, spider):
         self.client.close()

@@ -70,7 +70,7 @@ DOWNLOADER_MIDDLEWARES = {
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-   'guba.pipelines.MongoPipeline': 300,
+   'guba.pipelines.MongoBulkPipeline': 300,
    # 'guba.pipelines.PageNumberPipeline': 300
 }
 
