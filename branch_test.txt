@@ -1,6 +1,2 @@
 just for branch test !
-<<<<<<< HEAD
-test for branch debug1
-=======
-test for branch debug2
->>>>>>> debug2
+test for branch debug0
