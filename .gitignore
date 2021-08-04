@@ -4,3 +4,4 @@
 .gitattributes
 /guba/guba/ProxyPool
 /guba/guba/jobdir
+*.pyc
