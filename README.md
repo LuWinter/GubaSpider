@@ -1,2 +1,2 @@
 # GubaSpider
- 股吧爬虫2.0
+ Guba爬虫2.0
